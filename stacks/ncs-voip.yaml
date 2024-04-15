@@ -1,0 +1,1100 @@
+stack:
+  env:
+  project_key: ncs
+  name: nonprod-voip
+  account:
+  region:
+  vpc_name: n2p-dev-calling-server-vpc
+  custom_attributes:
+    sipproxy_record_name: "sip"
+    sipproxy_record_name_suffix: ""
+    tie_line_record_name: "tie-line"
+  tags:
+    tech:lob: tech_dev_n2p_office
+    tech:team_name: n2p_uniteplatform
+    cdk_git_repo: git@github.com:coretech/ncs-nonprod-voip-cdk.git
+    tech:environment_type: "{{ stack.env }}"
+    tech:env: "{{ stack.env }}"
+    tech:springProfileActive: "{{ stack.env }}"
+  asgs:
+    rtpengine:
+      disabled: false
+      public: true
+      instance_type: t3.small
+      ami_name: n2p-debian-rtpengine-20230511-01-56-14
+      deployment_config: HALF_AT_A_TIME
+      min_capacity: 2
+      max_capacity: 3
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 15
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+            - ec2:AssignIpv6Addresses
+            - ec2:AssociateAddress
+            - ec2:CreateTags
+            - ec2:CreateTrafficMirrorSession
+            - ec2:DescribeAddresses
+            - ec2:DescribeInstances
+            - ec2:DescribeTags
+            - ec2:DescribeTrafficMirrorFilters
+            - ec2:DescribeTrafficMirrorTargets
+        n2p-callingserver-rtpengine:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/n2p-callingserver-rtpengine-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-callingserver-rtpengine-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.env}}-{{stack.logical_region}}/n2p-callingserver-rtpengine-*
+          actions:
+            - secretsmanager:GetSecretValue
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+      security_groups:
+        10000_40000:
+          port: 10000
+          to_port: 40000
+          protocol: UDP
+          cidrs:
+            - 0.0.0.0/0
+            - ::/0
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        7724_TCP:
+          port: 7724
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+        7724_UDP:
+          port: 7724
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+    asterisk:
+      disabled: false
+      instance_type: t3.small
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: HALF_AT_A_TIME
+      min_capacity: 2
+      max_capacity: 3
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 20
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+            - logs:PutLogEvents
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            - logs:GetLogEvents
+            - logs:FilterLogEvents
+            - ec2:DescribeTags
+            - ec2:DescribeInstances
+        s3-ncs-system-prompts-*:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-system-prompts{{stack.custom_attributes.s3_bucket_logical_region}}/*
+          actions:
+            - s3:GetObject
+            - s3:PutObject
+        s3-ncs-system-prompts:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-system-prompts{{stack.custom_attributes.s3_bucket_logical_region}}
+          actions:
+            - s3:ListBucket
+        s3-ncs-prompts-*:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-prompts{{stack.custom_attributes.s3_bucket_logical_region}}/*
+          actions:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:Head*
+            - s3:List*
+        s3-ncs-prompts:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-prompts{{stack.custom_attributes.s3_bucket_logical_region}}
+          actions:
+            - s3:List*
+            - s3:Head*
+        s3-ncs-call-recordings-*:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-call-recordings{{stack.custom_attributes.s3_bucket_logical_region}}/*
+          actions:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:Head*
+            - s3:List*
+        s3-ncs-call-recordings:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-call-recordings{{stack.custom_attributes.s3_bucket_logical_region}}
+          actions:
+            - s3:List*
+            - s3:Head*
+        ncs-dialplan-service:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/ncs-dialplan-service-*
+          actions:
+            - secretsmanager:GetSecretValue
+        splunkToken:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/n2p/splunkToken-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-asterisk-proxy:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/n2p-asterisk-proxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-asterisk-proxy-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.env}}-{{stack.logical_region}}/n2p-asterisk-proxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-callingserver-asterisk:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/n2p-callingserver-asterisk-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-callingserver-asterisk-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.env}}-{{stack.logical_region}}/n2p-callingserver-asterisk-*
+          actions:
+            - secretsmanager:GetSecretValue
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+      security_groups:
+        10000_20000:
+          port: 10000
+          to_port: 20000
+          protocol: UDP
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        7060:
+          port: 7060
+          protocol: UDP
+        80:
+          port: 80
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        9901:
+          port: 9901
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+        8088:
+          port: 8088
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5038:
+          port: 5038
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        8081:
+          port: 8081
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+    asterisk-click-to-call:
+      disabled: false
+      instance_type: t3.small
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: HALF_AT_A_TIME
+      min_capacity: 2
+      max_capacity: 3
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 20
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+            - logs:PutLogEvents
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            - logs:GetLogEvents
+            - logs:FilterLogEvents
+            - ec2:DescribeTags
+            - ec2:DescribeInstances
+        s3-ncs-system-prompts-*:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-system-prompts{{stack.custom_attributes.s3_bucket_logical_region}}/*
+          actions:
+            - s3:GetObject
+            - s3:PutObject
+        s3-ncs-system-prompts:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-system-prompts{{stack.custom_attributes.s3_bucket_logical_region}}
+          actions:
+            - s3:ListBucket
+        s3-ncs-prompts-*:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-prompts{{stack.custom_attributes.s3_bucket_logical_region}}/*
+          actions:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:Head*
+            - s3:List*
+        s3-ncs-prompts:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-prompts{{stack.custom_attributes.s3_bucket_logical_region}}
+          actions:
+            - s3:List*
+            - s3:Head*
+        s3-ncs-call-recordings-*:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-call-recordings{{stack.custom_attributes.s3_bucket_logical_region}}/*
+          actions:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:Head*
+            - s3:List*
+        s3-ncs-call-recordings:
+          resource: arn:aws:s3:::n2p-media-{{stack.custom_attributes.media_bucket_env}}-ncs-call-recordings{{stack.custom_attributes.s3_bucket_logical_region}}
+          actions:
+            - s3:List*
+            - s3:Head*
+        secret-ncs-dialplan-service:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/ncs-dialplan-service-*
+          actions:
+            - secretsmanager:GetSecretValue
+        splunkToken:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/n2p/splunkToken-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-asterisk-proxy:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/n2p-asterisk-proxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-callingserver-asterisk:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/n2p-callingserver-asterisk-*
+          actions:
+            - secretsmanager:GetSecretValue
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-asterisk-proxy-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.env}}-{{stack.logical_region}}/n2p-asterisk-proxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        n2p-callingserver-asterisk-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.env}}-{{stack.logical_region}}/n2p-callingserver-asterisk-*
+          actions:
+            - secretsmanager:GetSecretValue
+      security_groups:
+        10000_20000:
+          port: 10000
+          to_port: 20000
+          protocol: UDP
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        7060:
+          port: 7060
+          protocol: UDP
+        80:
+          port: 80
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        9901:
+          port: 9901
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+        8088:
+          port: 8088
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5038:
+          port: 5038
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+        8081:
+          port: 8081
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+    sipproxy:
+      disabled: true
+      instance_type: t3.small
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: HALF_AT_A_TIME
+      storage_size: 30
+      min_capacity: 3
+      max_capacity: 6
+      health_check_grace: 300
+      internal_vpc_access: true
+      resource_permissions:
+        secret-ncs-sipproxy:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/ncs-sipproxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        secret-ncs-sipproxy-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.env}}-{{stack.logical_region}}/ncs-sipproxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+            - logs:PutLogEvents
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            - logs:GetLogEvents
+            - logs:FilterLogEvents
+            - ec2:DescribeInstances
+            - route53:ListHostedZonesByName
+            - route53:ListResourceRecordSets
+            - elasticloadbalancing:DescribeLoadBalancers
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DescribeTags
+            - autoscaling:DescribeAutoScalingGroups
+            - route53:ChangeResourceRecordSets
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+        splunkToken:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/n2p/splunkToken-*
+          actions:
+            - secretsmanager:GetSecretValue
+      security_groups:
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5040:
+          port: 5040
+          protocol: UDP
+        5080:
+          port: 5080
+          protocol: UDP
+        5090_UDP:
+          port: 5090
+          protocol: UDP
+          cidrs:
+            - 169.132.88.0/22
+            - 216.53.105.128/28
+            - 216.53.4.5/32
+            - 66.33.147.146/32
+        5090_TCP:
+          port: 5090
+          protocol: TCP
+          cidrs:
+            - 169.132.88.0/22
+            - 216.53.105.128/28
+            - 216.53.4.5/32
+            - 66.33.147.146/32
+        8182:
+          port: 8182
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+        5099:
+          port: 5099
+          protocol: UDP
+        6070_TCP:
+          port: 6070
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6070_UDP:
+          port: 6070
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6071_TCP:
+          port: 6071
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        443:
+          port: 443
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5070:
+          port: 5070
+          protocol: UDP
+    callingserver-sipproxy:
+      disabled: true
+      public: true
+      instance_type: t3.nano
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: HALF_AT_A_TIME
+      min_capacity: 1
+      max_capacity: 1
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 15
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+        n2p-callingserver-sipproxy:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/n2p-callingserver-sipproxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+        splunkToken:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/n2p/splunkToken-*
+          actions:
+            - secretsmanager:GetSecretValue
+      security_groups:
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5099:
+          port: 5099
+          protocol: UDP
+        6070_TCP:
+          port: 6070
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6070_UDP:
+          port: 6070
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6085_TCP:
+          port: 6085
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6085_UDP:
+          port: 6085
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6086_TCP:
+          port: 6086
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6071_TCP:
+          port: 6071
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        443:
+          port: 443
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        5090_UDP:
+          port: 5090
+          protocol: UDP
+          cidrs:
+            - 169.132.88.0/22
+            - 216.53.105.128/28
+            - 216.53.4.5/32
+            - 66.33.147.146/32
+            - 35.153.228.129/32
+        5090_TCP:
+          port: 5090
+          protocol: TCP
+          cidrs:
+            - 169.132.88.0/22
+            - 216.53.105.128/28
+            - 216.53.4.5/32
+            - 66.33.147.146/32
+            - 35.153.228.129/32 # N2P Dev TGW
+        8182:
+          port: 8182
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+    callingserver-sipproxy-green:
+      disabled: true
+      public: true
+      instance_type: t3.nano
+      ami_name: n2p-kamailio_5.5.7-20240227-03-00-49
+      deployment_config: HALF_AT_A_TIME
+      min_capacity: 1
+      max_capacity: 1
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 15
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+            - ec2:AssignIpv6Addresses
+            - ec2:AssociateAddress
+            - ec2:CreateTags
+            - ec2:CreateTrafficMirrorSession
+            - ec2:DescribeAddresses
+            - ec2:DescribeInstances
+            - ec2:DescribeTags
+            - ec2:DescribeTrafficMirrorFilters
+            - ec2:DescribeTrafficMirrorTargets
+        n2p-callingserver-sipproxy:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/n2p-callingserver-sipproxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+        splunkToken:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/n2p/splunkToken-*
+          actions:
+            - secretsmanager:GetSecretValue
+      security_groups:
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5099:
+          port: 5099
+          protocol: UDP
+        6070_TCP:
+          port: 6070
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6070_UDP:
+          port: 6070
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6085_TCP:
+          port: 6085
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6085_UDP:
+          port: 6085
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6086_TCP:
+          port: 6086
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6071_TCP:
+          port: 6071
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        443:
+          port: 443
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        5090_UDP:
+          port: 5090
+          protocol: UDP
+          cidrs:
+            - 169.132.88.0/22
+            - 216.53.105.128/28
+            - 216.53.4.5/32
+            - 66.33.147.146/32
+            - 35.153.228.129/32
+        5090_TCP:
+          port: 5090
+          protocol: TCP
+          cidrs:
+            - 169.132.88.0/22
+            - 216.53.105.128/28
+            - 216.53.4.5/32
+            - 66.33.147.146/32
+            - 35.153.228.129/32 # N2P Dev TGW
+        8182:
+          port: 8182
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+    outbound-sbc-proxy:
+      disabled: false
+      public: true
+      instance_type: t3.nano
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: HALF_AT_A_TIME
+      min_capacity: 1
+      max_capacity: 1
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 30
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ec2:DescribeAddresses
+            - ec2:AssociateAddress
+            - ec2:DescribeTags
+            - ec2:DescribeInstances
+            - ecr:*
+            - logs:PutLogEvents
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            - logs:GetLogEvents
+            - logs:FilterLogEvents
+        secret-ncs-sbcproxy:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/ncs-sbcproxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        secret-ncs-sbcproxy-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{ stack.env }}-{{ stack.logical_region }}/ncs-sbcproxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+      security_groups:
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5080_UDP:
+          port: 5080
+          protocol: UDP
+    presence:
+      disabled: true
+      instance_type: t3.nano
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: HALF_AT_A_TIME
+      min_capacity: 2
+      max_capacity: 2
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 15
+      security_groups:
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5099:
+          port: 5099
+          protocol: UDP
+        5091:
+          port: 5091
+          protocol: UDP
+        5091_TCP:
+          port: 5091
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5099_TCP:
+          port: 5099
+          protocol: TCP
+        8182:
+          port: 8182
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+            - logs:PutLogEvents
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            - logs:GetLogEvents
+            - logs:FilterLogEvents
+            - ec2:DescribeTags
+            - ec2:DescribeInstances
+            - route53:ListHostedZonesByName
+            - route53:ListResourceRecordSets
+            - route53:ChangeResourceRecordSets
+        secret-n2p-callingserver-presence:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/n2p-callingserver-presence-*
+          actions:
+            - secretsmanager:GetSecretValue
+        secret-n2p-callingserver-presence-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.env}}-{{stack.logical_region}}/n2p-callingserver-presence-*
+          actions:
+            - secretsmanager:GetSecretValue
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+        splunkToken:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/n2p/splunkToken-*
+          actions:
+            - secretsmanager:GetSecretValue
+    voipmon:
+      disabled: true
+      instance_type: t3.small
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: ALL_AT_ONCE
+      min_capacity: 1
+      max_capacity: 1
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 20
+      security_groups:
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+            - logs:PutLogEvents
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            - logs:GetLogEvents
+            - logs:FilterLogEvents
+            - ec2:DescribeTags
+            - ec2:DescribeInstances
+            - ec2:DescribeTrafficMirrorFilters
+            - ec2:DescribeTrafficMirrorSessions
+            - ec2:DescribeTrafficMirrorTargets
+            - ec2:CreateTrafficMirrorFilter
+            - ec2:CreateTrafficMirrorFilterRule
+            - ec2:CreateTrafficMirrorTarget
+            - ec2:DeleteTrafficMirrorSession
+            - ec2:DeleteTrafficMirrorTarget
+            - ec2:CreateTags
+    tie-line-sip-proxy:
+      disabled: true
+      instance_type: t3.small
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: HALF_AT_A_TIME
+      storage_size: 15
+      min_capacity: 1
+      max_capacity: 1
+      health_check_grace: 300
+      internal_vpc_access: true
+      public: true
+      resource_permissions:
+        secret-ncs-tie-line-proxy:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.logical_region}}/{{stack.env}}/ncs-tie-line-proxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        secret-ncs-tie-line-proxy-new-format:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/ncs/{{stack.env}}-{{stack.logical_region}}/ncs-tie-line-proxy-*
+          actions:
+            - secretsmanager:GetSecretValue
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+            - logs:PutLogEvents
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:DescribeLogGroups
+            - logs:DescribeLogStreams
+            - logs:PutLogEvents
+            - logs:GetLogEvents
+            - logs:FilterLogEvents
+            - ec2:DescribeInstances
+            - route53:ListHostedZonesByName
+            - route53:ListResourceRecordSets
+            - elasticloadbalancing:DescribeLoadBalancers
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DescribeTags
+            - autoscaling:DescribeAutoScalingGroups
+            - route53:ChangeResourceRecordSets
+            - ec2:DescribeAddresses
+            - ec2:AssociateAddress
+            - ec2:AssignIpv6Addresses
+        new-relic-license-key:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:n2p-unitep/{{stack.env}}/new-relic-license-key-*
+          actions:
+            - secretsmanager:GetSecretValue
+        splunkToken:
+          resource: arn:aws:secretsmanager:{{ stack.region }}:{{ stack.account }}:secret:/tech_dev_n2p_2.0/n2p/splunkToken-*
+          actions:
+            - secretsmanager:GetSecretValue
+      security_groups:
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        5080_UDP:
+          port: 5080
+          protocol: UDP
+        6086_TCP:
+          port: 6086
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        8182:
+          port: 8182
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+    sipp:
+      disabled: true
+      public: true
+      instance_type: t3.nano
+      ami_name: debian-ldap-n2p-voip-base-20230511-02-36-41
+      deployment_config: HALF_AT_A_TIME
+      min_capacity: 6
+      max_capacity: 6
+      health_check_grace: 300
+      internal_vpc_access: true
+      storage_size: 30
+      resource_permissions:
+        "*":
+          resource: "*"
+          actions:
+            - ecr:*
+      security_groups:
+        22:
+          port: 22
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+        6070_TCP:
+          port: 6070
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6070_UDP:
+          port: 6070
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6071_TCP:
+          port: 6071
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6071_UDP:
+          port: 6071
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6072_TCP:
+          port: 6072
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6072_UDP:
+          port: 6072
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6073_TCP:
+          port: 6073
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6073_UDP:
+          port: 6073
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6074_TCP:
+          port: 6074
+          protocol: TCP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        6074_UDP:
+          port: 6074
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+        10000_20000:
+          port: 10000
+          to_port: 20000
+          protocol: UDP
+          cidrs:
+            - 169.132.90.0/23
+            - 10.235.0.0/17
+            - 0.0.0.0/0
+  nlbs:
+    sipproxy_nlb:
+      internet_facing: true
+      route53s:
+        sipproxy:
+          hosted_zone: "{{ stack.custom_attributes.sipproxy_route53_hosted_zone }}"
+          record_name: "{{ stack.custom_attributes.sipproxy_record_name }}{{ stack.custom_attributes.sipproxy_record_name_suffix }}.{{ stack.logical_region }}"
+          cert_domain_name: "{{ stack.custom_attributes.sipproxy_record_name }}{{ stack.custom_attributes.sipproxy_record_name_suffix }}.{{ stack.logical_region }}.{{ stack.custom_attributes.sipproxy_route53_hosted_zone }}"
+      listeners:
+        443:
+          port: 443
+          protocol: TLS
+          alpn_policy: HTTP2_OPTIONAL
+          target_asg: sipproxy
+          health_check_port: 443
+        6070:
+          port: 6070
+          protocol: TCP_UDP
+          target_asg: sipproxy
+          health_check_port: 6070
+        6071:
+          port: 6071
+          protocol: TLS
+          alpn_policy: HTTP2_OPTIONAL
+          target_asg: sipproxy
+          health_check_port: 6071
+        5090:
+          port: 5090
+          protocol: UDP
+          target_asg: sipproxy
+          health_check_port: 6070
+    tie-line-sip-proxy:
+      enabled: false
+      internet_facing: true
+      route53s:
+        tie-line-sip-proxy:
+          hosted_zone: "{{ stack.custom_attributes.sipproxy_route53_hosted_zone }}"
+          record_name: "{{ stack.custom_attributes.tie_line_record_name }}{{ stack.custom_attributes.tie_line_record_name_suffix }}.{{ stack.logical_region}}"
+          cert_domain_name: "{{ stack.custom_attributes.tie_line_record_name }}{{ stack.custom_attributes.tie_line_record_name_suffix }}.{{ stack.logical_region}}.{{ stack.custom_attributes.sipproxy_route53_hosted_zone }}"
+      listeners:
+        6086:
+          port: 6086
+          protocol: TLS
+          alpn_policy: HTTP2_OPTIONAL
+          target_asg: tie-line-sip-proxy
+          health_check_port: 22
+  route53s:
+    sipproxy-dmq:
+      hosted_zone: "{{ stack.custom_attributes.sipproxy_dmq_hosted_zone }}"
+      record_name: "dmq-sipproxy-{{ stack.env }}.{{ stack.logical_region }}"
+    presence:
+      enabled: true
+      hosted_zone: "{{ stack.custom_attributes.n2p_io_hosted_zone }}"
+      record_name: "presence-{{ stack.env }}.{{ stack.logical_region }}"
+    presence-naptr:
+      enabled: true
+      hosted_zone: "{{ stack.custom_attributes.n2p_io_hosted_zone }}"
+      record_name: "presence-{{ stack.env }}.{{ stack.logical_region }}"
+      type: NAPTR
+  secrets:
+    n2p-callingserver-rtpengine: /tech_dev_n2p_2.0/ncs/{{ stack.logical_region }}/{{ stack.env }}/n2p-callingserver-rtpengine
+    n2p-callingserver-rtpengine-new-format: /tech_dev_n2p_2.0/ncs/{{ stack.env }}-{{ stack.logical_region }}/n2p-callingserver-rtpengine
+    n2p-callingserver-asterisk: /tech_dev_n2p_2.0/ncs/{{ stack.logical_region }}/{{ stack.env }}/n2p-callingserver-asterisk
+    n2p-callingserver-asterisk-new-format: /tech_dev_n2p_2.0/ncs/{{ stack.env }}-{{ stack.logical_region }}/n2p-callingserver-asterisk
+    n2p-asterisk-proxy: /tech_dev_n2p_2.0/ncs/{{ stack.logical_region }}/{{ stack.env }}/n2p-asterisk-proxy
+    n2p-asterisk-proxy-new-format: /tech_dev_n2p_2.0/ncs/{{ stack.env }}-{{ stack.logical_region }}/n2p-asterisk-proxy
+    ncs-sipproxy: /tech_dev_n2p_2.0/ncs/{{ stack.logical_region }}/{{ stack.env }}/ncs-sipproxy
+    ncs-sipproxy-new-format: /tech_dev_n2p_2.0/ncs/{{ stack.env }}-{{ stack.logical_region }}/ncs-sipproxy
+    ncs-sbcproxy: /tech_dev_n2p_2.0/ncs/{{ stack.logical_region }}/{{ stack.env }}/ncs-sbcproxy
+    ncs-sbcproxy-new-format: /tech_dev_n2p_2.0/ncs/{{ stack.env }}-{{ stack.logical_region }}/ncs-sbcproxy
+    n2p-callingserver-presence: /tech_dev_n2p_2.0/ncs/{{ stack.logical_region }}/{{ stack.env }}/n2p-callingserver-presence
+    n2p-callingserver-presence-new-format: /tech_dev_n2p_2.0/ncs/{{ stack.env }}-{{ stack.logical_region }}/n2p-callingserver-presence
+    n2p-callingserver-sipproxy: /tech_dev_n2p_2.0/ncs/{{ stack.logical_region }}/{{ stack.env }}/n2p-callingserver-sipproxy
+    ncs-tie-line-proxy: /tech_dev_n2p_2.0/ncs/{{ stack.logical_region }}/{{ stack.env }}/ncs-tie-line-proxy
+    ncs-tie-line-proxy-new-format: /tech_dev_n2p_2.0/ncs/{{ stack.env }}-{{ stack.logical_region }}/ncs-tie-line-proxy
+  eips:
+    rtpengine:
+      count: 2
+    outbound-sbc-proxy:
+      count: 1
+
