@@ -1,5 +1,5 @@
 stack:
-  version: 0.0.1 
+  version: 0.0.2
   env:
   project_key: ncs
   name: nonprod-voip
